@@ -1,5 +1,37 @@
 <template>
   <div class="chat-container">
+    <!-- Settings panel -->
+    <div class="settings-panel" :class="{ 'show-settings': showSettings }">
+      <h2>Ustawienia XingXing Chat</h2>
+      <div class="settings-group">
+        <label for="apiKey">Klucz API OpenAI:</label>
+        <input 
+          type="password" 
+          id="apiKey" 
+          v-model="apiKey" 
+          placeholder="sk-..." 
+          @input="saveSettings"
+        />
+        <small>Klucz API jest przechowywany tylko w lokalnej pamięci przeglądarki.</small>
+      </div>
+      <div class="settings-group">
+        <label for="systemPrompt">Prompt Systemowy:</label>
+        <textarea 
+          id="systemPrompt" 
+          v-model="systemPrompt" 
+          rows="8" 
+          @input="saveSettings"
+        ></textarea>
+      </div>
+      <div class="settings-group">
+        <label>
+          <input type="checkbox" v-model="useRandomResponses" @change="saveSettings" />
+          Używaj losowych odpowiedzi gdy API nie jest dostępne
+        </label>
+      </div>
+      <button class="close-settings" @click="toggleSettings">Zamknij</button>
+    </div>
+    
     <div class="chat-header">
       <div class="header-avatar">
         <img :src="monkey1" alt="Xing Xing" />
@@ -9,6 +41,12 @@
         <p class="status" v-if="isTyping">Xing Xing pisze...</p>
         <p class="status" v-else>online</p>
       </div>
+      <button class="settings-button" @click="toggleSettings" title="Ustawienia">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1-2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </div>
 
     <!-- Chat messages -->
@@ -16,6 +54,9 @@
       <div v-if="chatHistory.length === 0" class="empty-chat">
         <img :src="monkey9" alt="Xing Xing" class="welcome-monkey" />
         <p>Zadaj Xing Xing pytanie aby uzyskać mądrość z gór</p>
+        <p v-if="!apiKey" class="api-warning">
+          Uwaga: Brak klucza API. Kliknij ikonę ustawień <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1-2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> aby skonfigurować OpenAI API.
+        </p>
       </div>
       
       <div v-else class="messages">
@@ -34,10 +75,12 @@
               <img :src="entry.monkeyImage" alt="Xing Xing" />
             </div>
             <div class="xingxing-message">
-              <p>{{ entry.answer }}</p>
+              <p v-if="entry.loading">Myślę...</p>
+              <p v-else v-html="formatMessage(entry.answer)"></p>
               <!-- Special image for easter eggs -->
               <img v-if="entry.hasImage" :src="entry.image" class="message-image" alt="Special response" />
               <span class="time">{{ entry.time }}</span>
+              <span v-if="entry.error" class="error-message">{{ entry.error }}</span>
             </div>
           </div>
         </div>
@@ -62,7 +105,7 @@
       <textarea 
         v-model="userQuestion" 
         placeholder="Napisz wiadomość..." 
-        @keyup.enter.prevent="askQuestion"
+        @keyup.enter="handleEnterKeyPress"
         :disabled="isTyping"
         class="message-input"
         ref="messageInput"
@@ -81,7 +124,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted } from 'vue';
+import { ref, nextTick, onMounted, computed } from 'vue';
 
 // Import monkey images
 import monkey1 from '../assets/1.png';
@@ -121,12 +164,30 @@ const gifImages = [
   angryGif, catGif, chillGif, furiousGif, happyGif, madGif, shockedGif, whateverGif
 ];
 
+// API and Settings
+const apiKey = ref('');
+const showSettings = ref(false);
+const useRandomResponses = ref(true);
+const systemPrompt = ref(
+`Jesteś Xing Xing, małpka mądrości z tybetańskiego klasztoru w górach. 
+Twoja osobowość jest pogodna, filozoficzna, czasem sarkastyczna, i często mówisz jak buddyjski mędrzec.
+Możesz czasem wplatać słowa w małpim języku (np. "Uuk uuk!").
+Twoje odpowiedzi są średnio krótkie, ale mądre, z nutką humoru i filozoficznej głębi.
+Często odnosisz się do mądrości gór, świątyni, medytacji i życia małpy.
+
+Możesz posługiwać się emoji, zwłaszcza 🐒🍌🌄🏔️🧘‍♀️☯️.
+
+Nie musisz za każdym razem przypominać, że jesteś małpką, ale jeśli to pasuje do kontekstu, możesz o tym wspomnieć.
+Unikaj nudnych, formalnych odpowiedzi - bądź charakterystyczny i pełen życia!`
+);
+
 // State variables
 const userQuestion = ref('');
 const chatHistory = ref([]);
 const isTyping = ref(false);
 const messagesContainer = ref(null);
 const messageInput = ref(null);
+const conversations = ref([]);
 
 // Random monkey expressions based on answer type
 const positiveMonkeys = [monkey1, monkey9, monkey10, monkey13];
@@ -216,6 +277,100 @@ const scrollToBottom = async () => {
   }
 };
 
+// Format message - convert newlines to <br> and process markdown-style formatting
+const formatMessage = (message) => {
+  if (!message) return '';
+  
+  // Convert URLs to clickable links
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  let formattedMessage = message.replace(urlRegex, '<a href="$1" target="_blank">$1</a>');
+  
+  // Convert newlines to <br>
+  formattedMessage = formattedMessage.replace(/\n/g, '<br>');
+  
+  // Convert *text* to <em>text</em> (italics)
+  formattedMessage = formattedMessage.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  
+  // Convert **text** to <strong>text</strong> (bold)
+  formattedMessage = formattedMessage.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  
+  return formattedMessage;
+};
+
+// OpenAI API functions
+const callOpenAI = async (question) => {
+  if (!apiKey.value) {
+    throw new Error('Klucz API OpenAI nie został skonfigurowany.');
+  }
+
+  try {
+    const messages = [
+      { role: 'system', content: systemPrompt.value },
+      ...conversations.value.map(conv => ({ role: 'user', content: conv.question }))
+        .concat(conversations.value.map(conv => ({ role: 'assistant', content: conv.answer }))),
+      { role: 'user', content: question }
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey.value}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: messages,
+        temperature: 0.9,
+        max_tokens: 500,
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Błąd podczas łączenia z OpenAI API');
+    }
+
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error);
+    throw error;
+  }
+};
+
+// Handle Enter key press (send if not pressing Shift)
+const handleEnterKeyPress = (event) => {
+  if (!event.shiftKey) {
+    event.preventDefault();
+    askQuestion();
+  }
+};
+
+// Get random response when API is not available
+const getRandomResponse = (isQuestion) => {
+  const responses = isQuestion ? questionAnswers : casualResponses;
+  return responses[Math.floor(Math.random() * responses.length)];
+};
+
+// Settings toggle
+const toggleSettings = () => {
+  showSettings.value = !showSettings.value;
+};
+
+// Save settings to localStorage
+const saveSettings = () => {
+  localStorage.setItem('xingxing-api-key', apiKey.value);
+  localStorage.setItem('xingxing-system-prompt', systemPrompt.value);
+  localStorage.setItem('xingxing-use-random', useRandomResponses.value.toString());
+};
+
+// Load settings from localStorage
+const loadSettings = () => {
+  apiKey.value = localStorage.getItem('xingxing-api-key') || '';
+  systemPrompt.value = localStorage.getItem('xingxing-system-prompt') || systemPrompt.value;
+  useRandomResponses.value = localStorage.getItem('xingxing-use-random') === 'true';
+};
+
 const askQuestion = async () => {
   if (!userQuestion.value.trim() || isTyping.value) return;
   
@@ -227,7 +382,8 @@ const askQuestion = async () => {
     question: question,
     answer: '',
     monkeyImage: null,
-    time: getCurrentTime()
+    time: getCurrentTime(),
+    loading: true
   });
   
   await scrollToBottom();
@@ -248,6 +404,7 @@ const askQuestion = async () => {
     chatHistory.value[chatHistory.value.length - 1].monkeyImage = monkey6;
     chatHistory.value[chatHistory.value.length - 1].hasImage = true;
     chatHistory.value[chatHistory.value.length - 1].image = cucumberGif;
+    chatHistory.value[chatHistory.value.length - 1].loading = false;
     
     // Stop typing indicator
     isTyping.value = false;
@@ -262,9 +419,84 @@ const askQuestion = async () => {
   }
   
   // Random typing delay between 1.5 and 3 seconds
-  const typingTime = Math.random() * 1500 + 1500;
+  const minTypingTime = 1500;
+  const typingTime = Math.random() * 1500 + minTypingTime;
   
+  // If API key is set, try to use OpenAI
+  if (apiKey.value) {
+    try {
+      const aiResponse = await callOpenAI(question);
+      
+      // Ensure minimum typing time for natural feel
+      const remainingTime = typingTime - (Date.now() - (chatHistory.value[chatHistory.value.length - 1].startTime || Date.now()));
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
+      // Update conversation history for context
+      conversations.value.push({
+        question: question,
+        answer: aiResponse
+      });
+      
+      // Limit conversation context length
+      if (conversations.value.length > 10) {
+        conversations.value = conversations.value.slice(-10);
+      }
+      
+      // Add AI response
+      chatHistory.value[chatHistory.value.length - 1].answer = aiResponse;
+      chatHistory.value[chatHistory.value.length - 1].monkeyImage = getAppropriateMonkeyImage(aiResponse);
+      chatHistory.value[chatHistory.value.length - 1].loading = false;
+      
+      // Random chance for adding a GIF (10%)
+      if (Math.random() < 0.1) {
+        chatHistory.value[chatHistory.value.length - 1].hasImage = true;
+        chatHistory.value[chatHistory.value.length - 1].image = getRandomGif();
+      }
+      
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      
+      // If random responses are enabled, fall back to them
+      if (useRandomResponses.value) {
+        await handleRandomResponse(question);
+      } else {
+        // Show error message
+        chatHistory.value[chatHistory.value.length - 1].answer = "Xing Xing nie może się teraz połączyć z mądrością gór.";
+        chatHistory.value[chatHistory.value.length - 1].monkeyImage = confusedMonkeys[Math.floor(Math.random() * confusedMonkeys.length)];
+        chatHistory.value[chatHistory.value.length - 1].error = error.message;
+        chatHistory.value[chatHistory.value.length - 1].loading = false;
+      }
+    }
+  } else {
+    // No API key, use random responses if enabled
+    if (useRandomResponses.value) {
+      await handleRandomResponse(question);
+    } else {
+      // Show error about missing API key
+      await new Promise(resolve => setTimeout(resolve, typingTime));
+      chatHistory.value[chatHistory.value.length - 1].answer = "Xing Xing potrzebuje klucza API, aby połączyć się z mądrością gór.";
+      chatHistory.value[chatHistory.value.length - 1].monkeyImage = confusedMonkeys[Math.floor(Math.random() * confusedMonkeys.length)];
+      chatHistory.value[chatHistory.value.length - 1].error = "Brakujący klucz API OpenAI. Skonfiguruj go w ustawieniach.";
+      chatHistory.value[chatHistory.value.length - 1].loading = false;
+    }
+  }
+  
+  // Stop typing indicator
+  isTyping.value = false;
+  
+  // Scroll to bottom
+  await scrollToBottom();
+  
+  // Focus back on input
+  messageInput.value?.focus();
+};
+
+// Handle random response logic (extracted for reuse)
+const handleRandomResponse = async (question) => {
   // Wait for "typing" to complete
+  const typingTime = Math.random() * 1500 + 1500;
   await new Promise(resolve => setTimeout(resolve, typingTime));
   
   // Determine the type of response
@@ -306,18 +538,14 @@ const askQuestion = async () => {
     chatHistory.value[chatHistory.value.length - 1].monkeyImage = getAppropriateMonkeyImage(randomAnswer);
   }
   
-  // Stop typing indicator
-  isTyping.value = false;
-  
-  // Scroll to bottom
-  await scrollToBottom();
-  
-  // Focus back on input
-  messageInput.value?.focus();
+  chatHistory.value[chatHistory.value.length - 1].loading = false;
 };
 
 // When component mounts
 onMounted(async () => {
+  // Load saved settings
+  loadSettings();
+  
   // Focus on message input
   messageInput.value?.focus();
 });
@@ -376,6 +604,83 @@ onMounted(async () => {
   opacity: 0.8;
 }
 
+/* Settings Panel */
+.settings-button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.settings-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.settings-panel {
+  position: absolute;
+  top: 0;
+  right: -100%;
+  width: 300px;
+  height: 100%;
+  background-color: white;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  padding: 20px;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+}
+
+.settings-panel.show-settings {
+  right: 0;
+}
+
+.settings-group {
+  margin-bottom: 20px;
+}
+
+.settings-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.settings-group input[type="password"],
+.settings-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.settings-group small {
+  display: block;
+  margin-top: 5px;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.close-settings {
+  background-color: #075e54;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.close-settings:hover {
+  background-color: #064942;
+}
+
 .messages-container {
   flex: 1;
   overflow-y: auto;
@@ -399,6 +704,22 @@ onMounted(async () => {
   margin-bottom: 20px;
   border-radius: 50%;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.api-warning {
+  margin-top: 10px;
+  color: #d85c3c;
+  font-size: 0.9rem;
+  max-width: 250px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.api-warning svg {
+  vertical-align: middle;
 }
 
 .messages {
@@ -482,6 +803,13 @@ onMounted(async () => {
   margin-top: 8px;
   margin-bottom: 4px;
   border-radius: 8px;
+}
+
+.error-message {
+  display: block;
+  font-size: 0.8rem;
+  color: #d85c3c;
+  margin-top: 5px;
 }
 
 .typing-indicator {
@@ -590,6 +918,10 @@ onMounted(async () => {
   
   .xingxing-message {
     max-width: calc(85% - 38px);
+  }
+  
+  .settings-panel {
+    width: 100%;
   }
 }
 </style>
